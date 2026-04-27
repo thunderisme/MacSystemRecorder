@@ -12,6 +12,10 @@ struct ContentView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 16) {
+                if !recorder.hasScreenCapturePermission {
+                    permissionPanel
+                }
+
                 sourcePanel
                 audioPanel
                 optionsPanel
@@ -104,6 +108,55 @@ struct ContentView: View {
         }
     }
 
+    private var permissionPanel: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "hand.raised.fill")
+                .foregroundStyle(.orange)
+                .font(.system(size: 22, weight: .semibold))
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(recorder.permissionTitle)
+                    .font(.headline)
+
+                Text(recorder.permissionMessage)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 10) {
+                    Button {
+                        recorder.requestScreenCapturePermission()
+                    } label: {
+                        Label("Grant Access", systemImage: "lock.open")
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button {
+                        recorder.openScreenRecordingSettings()
+                    } label: {
+                        Label("Open Settings", systemImage: "gear")
+                    }
+
+                    Button {
+                        Task { await recorder.refreshDisplays() }
+                    } label: {
+                        Label("Check Again", systemImage: "arrow.clockwise")
+                    }
+                }
+                .padding(.top, 4)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.orange.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     private var audioPanel: some View {
         SettingsPanel(title: "Audio", systemImage: "speaker.wave.2") {
             HStack(spacing: 24) {
@@ -194,7 +247,7 @@ struct ContentView: View {
             Button {
                 Task { await recorder.refreshDisplays() }
             } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
+                Label(recorder.hasScreenCapturePermission ? "Refresh" : "Check Access", systemImage: "arrow.clockwise")
             }
             .controlSize(.large)
             .disabled(recorder.controlsAreLocked)

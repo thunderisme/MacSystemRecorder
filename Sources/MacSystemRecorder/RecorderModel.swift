@@ -6,6 +6,12 @@ import SwiftUI
 
 @MainActor
 final class RecorderModel: ObservableObject {
+    enum ScreenCapturePermissionState {
+        case unknown
+        case granted
+        case needsPermission
+    }
+
     @Published var displays: [DisplayChoice] = []
     @Published var selectedDisplayID: CGDirectDisplayID?
     @Published var outputURL: URL = RecorderModel.defaultOutputURL()
@@ -20,6 +26,7 @@ final class RecorderModel: ObservableObject {
     @Published var statusMessage = "Ready."
     @Published var statusIsError = false
     @Published var elapsedText = "00:00"
+    @Published var screenCapturePermissionState: ScreenCapturePermissionState = .unknown
 
     private var recorder: ScreenRecorder?
     private var startedAt: Date?
@@ -28,7 +35,7 @@ final class RecorderModel: ObservableObject {
     private var cropDisplayID: CGDirectDisplayID?
 
     var canStartOrStop: Bool {
-        isRecording || isCountingDown || selectedDisplayID != nil
+        isRecording || isCountingDown || (hasScreenCapturePermission && selectedDisplayID != nil)
     }
 
     var controlsAreLocked: Bool {
@@ -61,9 +68,37 @@ final class RecorderModel: ObservableObject {
         lastSavedURL == nil || isRecording ? "Save to" : "Last saved"
     }
 
+    var hasScreenCapturePermission: Bool {
+        screenCapturePermissionState == .granted
+    }
+
+    var permissionTitle: String {
+        switch screenCapturePermissionState {
+        case .unknown:
+            "Checking Screen Recording Access"
+        case .granted:
+            "Screen Recording Access Enabled"
+        case .needsPermission:
+            "Screen Recording Access Needed"
+        }
+    }
+
+    var permissionMessage: String {
+        switch screenCapturePermissionState {
+        case .unknown:
+            "MacSystemRecorder is checking macOS privacy access."
+        case .granted:
+            "MacSystemRecorder can record the selected display and system audio."
+        case .needsPermission:
+            "Click Grant Access. If macOS opens System Settings, enable MacSystemRecorder under Screen & System Audio Recording, then reopen the app."
+        }
+    }
+
     func refreshDisplays() async {
-        guard requestScreenCapturePermissionIfNeeded() else {
-            setStatus("Screen Recording permission is required. Allow MacSystemRecorder in System Settings, then quit and reopen the app.", isError: true)
+        guard checkScreenCapturePermission() else {
+            displays = []
+            selectedDisplayID = nil
+            setStatus("Screen Recording access is required before displays can load.", isError: true)
             return
         }
 
@@ -104,6 +139,29 @@ final class RecorderModel: ObservableObject {
         if FileManager.default.fileExists(atPath: url.path) {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } else {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func requestScreenCapturePermission() {
+        if checkScreenCapturePermission() {
+            Task { await refreshDisplays() }
+            return
+        }
+
+        let granted = CGRequestScreenCaptureAccess()
+        if granted {
+            screenCapturePermissionState = .granted
+            setStatus("Screen Recording access granted.", isError: false)
+            Task { await refreshDisplays() }
+        } else {
+            screenCapturePermissionState = .needsPermission
+            setStatus("Enable MacSystemRecorder in System Settings, then quit and reopen the app.", isError: true)
+        }
+    }
+
+    func openScreenRecordingSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
             NSWorkspace.shared.open(url)
         }
     }
@@ -264,16 +322,13 @@ final class RecorderModel: ObservableObject {
         statusIsError = isError
     }
 
-    private func requestScreenCapturePermissionIfNeeded() -> Bool {
+    private func checkScreenCapturePermission() -> Bool {
         if CGPreflightScreenCaptureAccess() {
+            screenCapturePermissionState = .granted
             return true
         }
 
-        let granted = CGRequestScreenCaptureAccess()
-        if granted {
-            return true
-        }
-
+        screenCapturePermissionState = .needsPermission
         return false
     }
 

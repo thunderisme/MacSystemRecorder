@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="${1:-release}"
-VERSION="${VERSION:-0.2.4}"
+VERSION="${VERSION:-0.2.5}"
 PRODUCT_DIR="$ROOT_DIR/.build/$CONFIGURATION"
 DIST_DIR="$ROOT_DIR/dist/$CONFIGURATION"
 APP_DIR="$DIST_DIR/MacSystemRecorder.app"
@@ -28,7 +28,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <key>CFBundleExecutable</key>
   <string>MacSystemRecorder</string>
   <key>CFBundleIdentifier</key>
-  <string>local.mac-system-recorder</string>
+  <string>com.thunderisme.MacSystemRecorder</string>
   <key>CFBundleName</key>
   <string>MacSystemRecorder</string>
   <key>CFBundleDisplayName</key>

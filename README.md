@@ -104,6 +104,8 @@ open /Applications/MacSystemRecorder.app
 
 The app bundle is named `MacSystemRecorder.app`; Finder may display it as `Mac System Recorder`.
 
+If macOS privacy permissions get stuck, quit MacSystemRecorder, remove any old entry from **System Settings > Privacy & Security > Screen & System Audio Recording**, reopen the app, and use **Grant Access** from the permission panel.
+
 ## Publishing Source
 
 Initialize and push the repository:
