@@ -132,9 +132,9 @@ struct ContentView: View {
                     .buttonStyle(.borderedProminent)
 
                     Button {
-                        Task { await recorder.refreshDisplays() }
+                        recorder.quitApp()
                     } label: {
-                        Label("Check Again", systemImage: "arrow.clockwise")
+                        Label("Quit App", systemImage: "power")
                     }
                 }
                 .padding(.top, 4)

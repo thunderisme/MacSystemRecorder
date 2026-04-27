@@ -90,7 +90,7 @@ final class RecorderModel: ObservableObject {
         case .granted:
             "MacSystemRecorder can record the selected display and system audio."
         case .needsPermission:
-            "Enable MacSystemRecorder in System Settings. If it is already enabled, toggle it off and back on once, then click Check Again."
+            "Enable MacSystemRecorder in System Settings, then quit and reopen the app. macOS usually applies Screen Recording changes only after relaunch."
         }
     }
 
@@ -114,7 +114,7 @@ final class RecorderModel: ObservableObject {
             displays = []
             selectedDisplayID = nil
             screenCapturePermissionState = .needsPermission
-            setStatus("macOS is not allowing capture yet. If MacSystemRecorder is already enabled in Settings, toggle it off and on, then click Check Again. \(error.localizedDescription)", isError: true)
+            setStatus("Screen Recording access needs a relaunch after you enable it in System Settings. \(error.localizedDescription)", isError: true)
         }
     }
 
@@ -144,6 +144,10 @@ final class RecorderModel: ObservableObject {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    func quitApp() {
+        NSApp.terminate(nil)
     }
 
     func selectCropArea() {
