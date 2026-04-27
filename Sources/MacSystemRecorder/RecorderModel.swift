@@ -90,18 +90,11 @@ final class RecorderModel: ObservableObject {
         case .granted:
             "MacSystemRecorder can record the selected display and system audio."
         case .needsPermission:
-            "Click Grant Access. If macOS opens System Settings, enable MacSystemRecorder under Screen & System Audio Recording, then reopen the app."
+            "Click Grant Access. If MacSystemRecorder is already enabled in System Settings, click Check Again. If it still fails, toggle MacSystemRecorder off and back on once."
         }
     }
 
     func refreshDisplays() async {
-        guard checkScreenCapturePermission() else {
-            displays = []
-            selectedDisplayID = nil
-            setStatus("Screen Recording access is required before displays can load.", isError: true)
-            return
-        }
-
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let choices = content.displays.enumerated().map { index, display in
@@ -115,9 +108,13 @@ final class RecorderModel: ObservableObject {
             if selectedDisplayID == nil || !choices.contains(where: { $0.id == selectedDisplayID }) {
                 selectedDisplayID = choices.first?.id
             }
+            screenCapturePermissionState = .granted
             setStatus(choices.isEmpty ? "No displays found." : "Ready.", isError: choices.isEmpty)
         } catch {
-            setStatus("Could not read displays. Toggle MacSystemRecorder off/on in Screen & System Audio Recording, then quit and reopen the app. \(error.localizedDescription)", isError: true)
+            displays = []
+            selectedDisplayID = nil
+            screenCapturePermissionState = .needsPermission
+            setStatus("macOS is not allowing capture yet. If MacSystemRecorder is already enabled in Settings, toggle it off and on, then click Check Again. \(error.localizedDescription)", isError: true)
         }
     }
 
@@ -144,7 +141,8 @@ final class RecorderModel: ObservableObject {
     }
 
     func requestScreenCapturePermission() {
-        if checkScreenCapturePermission() {
+        if CGPreflightScreenCaptureAccess() {
+            screenCapturePermissionState = .granted
             Task { await refreshDisplays() }
             return
         }
@@ -156,7 +154,7 @@ final class RecorderModel: ObservableObject {
             Task { await refreshDisplays() }
         } else {
             screenCapturePermissionState = .needsPermission
-            setStatus("Enable MacSystemRecorder in System Settings, then quit and reopen the app.", isError: true)
+            setStatus("Enable MacSystemRecorder in System Settings, then click Check Again.", isError: true)
         }
     }
 
@@ -320,16 +318,6 @@ final class RecorderModel: ObservableObject {
     private func setStatus(_ message: String, isError: Bool) {
         statusMessage = message
         statusIsError = isError
-    }
-
-    private func checkScreenCapturePermission() -> Bool {
-        if CGPreflightScreenCaptureAccess() {
-            screenCapturePermissionState = .granted
-            return true
-        }
-
-        screenCapturePermissionState = .needsPermission
-        return false
     }
 
     private func startElapsedTimer() {
