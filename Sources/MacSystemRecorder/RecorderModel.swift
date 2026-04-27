@@ -90,7 +90,7 @@ final class RecorderModel: ObservableObject {
         case .granted:
             "MacSystemRecorder can record the selected display and system audio."
         case .needsPermission:
-            "Click Grant Access. If MacSystemRecorder is already enabled in System Settings, click Check Again. If it still fails, toggle MacSystemRecorder off and back on once."
+            "Enable MacSystemRecorder in System Settings. If it is already enabled, toggle it off and back on once, then click Check Again."
         }
     }
 
@@ -137,24 +137,6 @@ final class RecorderModel: ObservableObject {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } else {
             NSWorkspace.shared.open(url)
-        }
-    }
-
-    func requestScreenCapturePermission() {
-        if CGPreflightScreenCaptureAccess() {
-            screenCapturePermissionState = .granted
-            Task { await refreshDisplays() }
-            return
-        }
-
-        let granted = CGRequestScreenCaptureAccess()
-        if granted {
-            screenCapturePermissionState = .granted
-            setStatus("Screen Recording access granted.", isError: false)
-            Task { await refreshDisplays() }
-        } else {
-            screenCapturePermissionState = .needsPermission
-            setStatus("Enable MacSystemRecorder in System Settings, then click Check Again.", isError: true)
         }
     }
 

@@ -125,17 +125,11 @@ struct ContentView: View {
 
                 HStack(spacing: 10) {
                     Button {
-                        recorder.requestScreenCapturePermission()
-                    } label: {
-                        Label("Grant Access", systemImage: "lock.open")
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button {
                         recorder.openScreenRecordingSettings()
                     } label: {
                         Label("Open Settings", systemImage: "gear")
                     }
+                    .buttonStyle(.borderedProminent)
 
                     Button {
                         Task { await recorder.refreshDisplays() }

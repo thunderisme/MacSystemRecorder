@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="${1:-release}"
-VERSION="${VERSION:-0.2.6}"
+VERSION="${VERSION:-0.2.7}"
 PRODUCT_DIR="$ROOT_DIR/.build/$CONFIGURATION"
 DIST_DIR="$ROOT_DIR/dist/$CONFIGURATION"
 APP_DIR="$DIST_DIR/MacSystemRecorder.app"
