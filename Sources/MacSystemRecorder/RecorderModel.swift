@@ -10,6 +10,7 @@ final class RecorderModel: ObservableObject {
         case unknown
         case granted
         case needsPermission
+        case needsRelaunch
     }
 
     @Published var displays: [DisplayChoice] = []
@@ -80,6 +81,8 @@ final class RecorderModel: ObservableObject {
             "Screen Recording Access Enabled"
         case .needsPermission:
             "Screen Recording Access Needed"
+        case .needsRelaunch:
+            "Restart Needed"
         }
     }
 
@@ -91,10 +94,14 @@ final class RecorderModel: ObservableObject {
             "MacSystemRecorder can record the selected display and system audio."
         case .needsPermission:
             "Enable MacSystemRecorder in System Settings, then quit and reopen the app. macOS usually applies Screen Recording changes only after relaunch."
+        case .needsRelaunch:
+            "macOS shows Screen Recording access is enabled, but this running copy has not picked it up yet. Quit and reopen MacSystemRecorder."
         }
     }
 
     func refreshDisplays() async {
+        let preflightAllowsScreenCapture = CGPreflightScreenCaptureAccess()
+
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let choices = content.displays.enumerated().map { index, display in
@@ -113,8 +120,28 @@ final class RecorderModel: ObservableObject {
         } catch {
             displays = []
             selectedDisplayID = nil
+            if preflightAllowsScreenCapture {
+                screenCapturePermissionState = .needsRelaunch
+                setStatus("Permission is enabled, but macOS has not applied it to this running app. Quit and reopen MacSystemRecorder.", isError: true)
+            } else {
+                screenCapturePermissionState = .needsPermission
+                setStatus("Enable MacSystemRecorder in System Settings, then quit and reopen the app. \(error.localizedDescription)", isError: true)
+            }
+        }
+    }
+
+    func requestScreenCapturePermission() async {
+        if CGPreflightScreenCaptureAccess() {
+            await refreshDisplays()
+            return
+        }
+
+        let granted = CGRequestScreenCaptureAccess()
+        if granted {
+            await refreshDisplays()
+        } else {
             screenCapturePermissionState = .needsPermission
-            setStatus("Screen Recording access needs a relaunch after you enable it in System Settings. \(error.localizedDescription)", isError: true)
+            setStatus("macOS needs Screen Recording access for MacSystemRecorder. Enable it in System Settings, then quit and reopen the app.", isError: true)
         }
     }
 
@@ -148,6 +175,20 @@ final class RecorderModel: ObservableObject {
 
     func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    func relaunchApp() {
+        let appURL = Bundle.main.bundleURL
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", appURL.path]
+
+        do {
+            try process.run()
+            NSApp.terminate(nil)
+        } catch {
+            setStatus("Could not relaunch automatically. Quit and open the app again. \(error.localizedDescription)", isError: true)
+        }
     }
 
     func selectCropArea() {

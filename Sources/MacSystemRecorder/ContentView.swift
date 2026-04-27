@@ -125,16 +125,22 @@ struct ContentView: View {
 
                 HStack(spacing: 10) {
                     Button {
-                        recorder.openScreenRecordingSettings()
+                        Task { await recorder.requestScreenCapturePermission() }
                     } label: {
-                        Label("Open Settings", systemImage: "gear")
+                        Label("Ask macOS", systemImage: "hand.raised")
                     }
                     .buttonStyle(.borderedProminent)
 
                     Button {
-                        recorder.quitApp()
+                        recorder.openScreenRecordingSettings()
                     } label: {
-                        Label("Quit App", systemImage: "power")
+                        Label("Open Settings", systemImage: "gear")
+                    }
+
+                    Button {
+                        recorder.relaunchApp()
+                    } label: {
+                        Label("Quit & Reopen", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
                 .padding(.top, 4)

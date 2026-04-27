@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="${1:-release}"
-VERSION="${VERSION:-0.2.9}"
+VERSION="${VERSION:-0.3.0}"
+SIGNING_MODE="${SIGNING_MODE:-adhoc}"
 PRODUCT_DIR="$ROOT_DIR/.build/$CONFIGURATION"
 DIST_DIR="$ROOT_DIR/dist/$CONFIGURATION"
 APP_DIR="$DIST_DIR/MacSystemRecorder.app"
@@ -57,8 +58,25 @@ PLIST
 
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
 
-if command -v codesign >/dev/null 2>&1; then
-  codesign --force --deep --sign - "$APP_DIR" >/dev/null 2>&1 || true
-fi
+case "$SIGNING_MODE" in
+  identity)
+    if [[ -z "${CODESIGN_IDENTITY:-}" ]]; then
+      echo "SIGNING_MODE=identity requires CODESIGN_IDENTITY."
+      exit 1
+    fi
+    codesign --force --deep --options runtime --timestamp --sign "$CODESIGN_IDENTITY" "$APP_DIR"
+    ;;
+  adhoc)
+    codesign --force --deep --sign - "$APP_DIR"
+    ;;
+  unsigned)
+    codesign --remove-signature "$MACOS_DIR/MacSystemRecorder" >/dev/null 2>&1 || true
+    echo "Created an unsigned bundle. Unsigned arm64 apps may not launch on every Mac."
+    ;;
+  *)
+    echo "Unknown SIGNING_MODE '$SIGNING_MODE'. Use adhoc, identity, or unsigned."
+    exit 1
+    ;;
+esac
 
 echo "Created $APP_DIR"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="${1:-release}"
-VERSION="${VERSION:-0.2.9}"
+VERSION="${VERSION:-0.3.0}"
 PRODUCT_DIR="$ROOT_DIR/.build/$CONFIGURATION"
 DIST_DIR="$ROOT_DIR/dist/$CONFIGURATION"
 APP_DIR="$DIST_DIR/MacSystemRecorder.app"
@@ -23,11 +23,17 @@ if command -v xattr >/dev/null 2>&1; then
   xattr -cr "$APP_DIR" 2>/dev/null || true
 fi
 
-pkgbuild \
-  --component "$APP_DIR" \
-  --install-location /Applications \
-  --identifier com.thunderisme.MacSystemRecorder \
-  --version "$VERSION" \
-  "$PKG_PATH"
+PKGBUILD_ARGS=(
+  --component "$APP_DIR"
+  --install-location /Applications
+  --identifier com.thunderisme.MacSystemRecorder
+  --version "$VERSION"
+)
+
+if [[ -n "${INSTALLER_SIGN_IDENTITY:-}" ]]; then
+  PKGBUILD_ARGS+=(--sign "$INSTALLER_SIGN_IDENTITY")
+fi
+
+pkgbuild "${PKGBUILD_ARGS[@]}" "$PKG_PATH"
 
 echo "Created $PKG_PATH"
