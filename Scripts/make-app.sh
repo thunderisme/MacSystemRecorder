@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="${1:-release}"
-VERSION="${VERSION:-0.2.7}"
+VERSION="${VERSION:-0.2.8}"
 PRODUCT_DIR="$ROOT_DIR/.build/$CONFIGURATION"
 DIST_DIR="$ROOT_DIR/dist/$CONFIGURATION"
 APP_DIR="$DIST_DIR/MacSystemRecorder.app"
@@ -56,5 +56,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 PLIST
 
 printf 'APPL????' > "$CONTENTS_DIR/PkgInfo"
+
+if command -v codesign >/dev/null 2>&1; then
+  codesign --force --deep --sign - "$APP_DIR" >/dev/null 2>&1 || true
+fi
 
 echo "Created $APP_DIR"
